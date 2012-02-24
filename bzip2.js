@@ -4,17 +4,6 @@
  *	@author kirilloid
  * @license CC-SA 3.0
  * @usage ArchUtils.bz2.decode(str)
- * str should be a binary-string like result of readAsBinaryString from HTML5 FileAPI
- * Actually, javascript implementations uses utf-16(LE) for internal representation of strings
- * if you want to transfer data over http, keep in mind encoding, used at your server
- * for example, if you use bzcompress in php, it will return iso-latin-1 encoded string
- * and if your server uses utf-8, you'll need to utf8_encode result before output
- * or set proper encoding http header
- * Moreover, if you transfer bzipped utf8 texts, you'll need to transform the result of bzip2-decoding in js
- * Even though escape/unesapce functions are considered deprecated, I would advise the following code
- * function utf8_decode(str) { return decodeURIComponent(escape(str)); }
- * cause it have most balanced execution time across different browsers and input strings
- *
  * @example ArchUtils.bz2.decode(
  * 		"BZh91AY&SYN\xEC\xE86\0\0\2Q\x80\0\x10@\0\6D\x90\x80 " +
  * 		"\x001\6LA\1\xA7\xA9\xA5\x80\xBB\x941\xF8\xBB\x92)\xC2\x84\x82wgA\xB0"
