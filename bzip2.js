@@ -164,18 +164,10 @@ var ArchUtils = (function(){
 	 * utility class, used for comparison of huffman codes
 	 */
 	var HuffmanLength = function(code, bits) {
-		if (typeof bits == "undefined") bits = 0;
 		this.code = code;
 		this.bits = bits;
 		this.symbol = undefined;
-
-		this.toString = function() {
-			return [this.code, this.bits, this.symbol/*, this.reverse_symbol*/];
-		}
-		this.valueOf = function() {
-			return this.bits * 1000 + this.code;
-		}
-	}
+	} //cropped unused functions and needless checks, Gonzalo
 
 	/**
 	 * @class HuffmanLength
