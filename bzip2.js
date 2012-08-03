@@ -14,11 +14,15 @@ var ArchUtils = (function(){
 	'use strict';
 
 	// python functions
+
 	function ord(c) { return String(c).charCodeAt(); }
+
 	function chr(n) { return String.fromCharCode(n); }
-	function sum(l) { return l.reduce(function(a,b){return a+b}, 0); }
+
 	// NOTE: for in loop works another way in js and iterates over keys
 	// therefore you can't use for (x in range(...)) the same way as in python
+
+
 	function range(start, stop, step) {
 		switch(arguments.length) {
 			case 0: return [];
@@ -40,11 +44,12 @@ var ArchUtils = (function(){
 	 * @url http://en.wikipedia.org/wiki/Burrows%E2%80%93Wheeler_transform
 	 * @license: CC-SA 3.0
 	 */
+
 	function bwt_reverse(src, primary) {
 		var len = src.length;
 		if (primary >= len) throw RangeError("Out of bound");
 		if (primary < 0) throw RangeError("Out of bound");
-		
+
 		if (typeof src == 'string') {
 			var A = src.split('');
 		} else {
@@ -52,13 +57,13 @@ var ArchUtils = (function(){
 			src = src.join('');
 		}
 		A.sort();
-		
+
 		var start = {};
 		for (var i = len-1; i >= 0; i--) start[A[i]] = i;
-		
+
 		var links = [];
 		for (i = 0; i < len; i++) links.push(start[src[i]]++);
-		
+
 		var i, first = A[i = primary], ret = [];
 		//while (i != primary) {
 		for (var j = 1; j < len; j++) {
@@ -67,12 +72,13 @@ var ArchUtils = (function(){
 		return first + ret.reverse().join('');
 	}
 	
-	function move_to_front(a, c) {
+	//move_to_front is always used to store reslt in array, optimized, Gonzalo
+	function move_to_front_and_store(a, c, buff) {
 		var v = a[c];
 		for (var i = c; i > 0; a[i] = a[--i]);
-		a[0] = v;
+		buff.push(a[0] = v);
 	}
-	
+
 	/**
 	 * @class BitfieldBase
 	 * base class for bit-precision reading from stream
@@ -108,53 +114,15 @@ var ArchUtils = (function(){
 		this.needbits = function(n) {
 			do { this._more() } while (this.bits < n);
 		}
-		this.toskip = function() {
-			return this.bits & 0x7;
-		}
 		this.align = function() {
-			this.readbits(this.toskip());
+			this.readbits(this.bits & 0x7); //inlined toskip, single use, Gonzalo
 		}
-		this.dropbits = function(n) {
-			if (typeof n == 'undefined') n = 8;
-			while (n >= this.bits && n > 7) {
-				n -= this.bits;
-				this.bits = 0;
-				n -= (this.f._read(n >> 3)).length << 3;
-			}
-			if (n) this.readbits(n);
-		}
-		this.dropbytes = function(n) {
-			if (typeof n == 'undefined') n = 1;
-			this.dropbits(n << 3);
-		}
+		// this.dropbytes not used, eliminated, Gonzalo
 		// some function for debugging
 		this.tell = function() {
-			return [this.count - ((this.bits+7) >> 3), 7 - ((this.bits-1) & 0x7)];
+			return [this.count - ((this.bits + 7) >> 3), 7 - ((this.bits - 1) & 0x7)];
 		}
 	}
-
-//	not used after all
-/*	ìar Bitfield = function() {
-		this._more = function() {
-			this.bitfield += this._readByte() << this.bits;
-			this.bits += 8;
-		}
-		this.readbits = function(n) {
-			if (typeof n == 'undefined') n = 8;
-			if (n >= 32) {
-				var n2 = n >> 1;
-				return this.readbits(n2) * (1 << n2) + this.readbits(n - n2);
-			}
-			if (n > this.bits) 
-				this.needbits(n);
-			var r = this.bitfield & this._masks[n];
-			this.bits -= n;
-			this.bitfield >>= n;
-			return r;
-		}
-	}
-	Bitfield.prototype = new BitfieldBase();*/
-
 	/**
 	 * @class BitfieldBase
 	 * right-sided bitfield for reading bits in byte from right to left
@@ -200,7 +168,7 @@ var ArchUtils = (function(){
 		this.code = code;
 		this.bits = bits;
 		this.symbol = undefined;
-		
+
 		this.toString = function() {
 			return [this.code, this.bits, this.symbol/*, this.reverse_symbol*/];
 		}
@@ -227,7 +195,7 @@ var ArchUtils = (function(){
 				bits = endbits;
 				if (endbits == -1) break;
 			}
-			l.sort(function cmpHuffmanTable(a, b){
+			l.sort(function (a, b) { //function cmpHuffmanTable(a, b), can be anonymous, optimized, Gonzalo
 				return (a.bits - b.bits) || (a.code - b.code);
 			});
 			this.table = l;
@@ -273,10 +241,8 @@ var ArchUtils = (function(){
 		}
 	}
 	OrderedHuffmanTable.prototype = new HuffmanTable();
-	
-	// unpackedSize is ignored here but added for uniformity
-	// this param simplifies Java (applet) implementation of bzip decoder
-	return ({ bz2: { decode: function(input, unpackedSize) {
+
+	return ({ bz2: { decode: function(input) { //eliminated unused unpackSize, Gonzalo
 		var b = new RBitfield();
 		b.init(input);
 		b.readbits(16);
@@ -310,8 +276,7 @@ var ArchUtils = (function(){
 		}
 
 		var out = [];
-		// TODO: I hope exection may me splitted into chunks
-		// and run with them in background
+
 		function main_loop() { while (true) {
 			var blocktype = b.readbits2(48);
 			var crc = b.readbits2(32);
@@ -319,7 +284,7 @@ var ArchUtils = (function(){
 				if (b.readbits(1)) throw "Bzip2 randomised support not implemented";
 				var pointer = b.readbits(24);
 				var used = getUsedCharTable(b);
-				
+
 				var huffman_groups = b.readbits(3);
 				if (2 > huffman_groups || huffman_groups > 6) 
 					throw RangeError("Bzip2: Number of Huffman groups not in range 2..6");
@@ -332,11 +297,13 @@ var ArchUtils = (function(){
 						if (c++ >= huffman_groups)
 							throw RangeError("More than max ("+huffman_groups+") groups");
 					}
-					move_to_front(mtf, c);
-					selectors_list.push(mtf[0]);
+					move_to_front_and_store(mtf, c, selectors_list); //optimized to single function, Gonzalo
 				}
 				var groups_lengths = [];
-				var symbols_in_use = sum(used) + 2  // remember RUN[AB] RLE symbols
+
+				// INLINE: sum used only once, Gonzalo
+				var symbols_in_use = used.reduce( function(a, b) {return a + b}, 0 ) + 2; //sum(used) + 2 // remember RUN[AB] RLE symbols
+				
 				for (var j = 0; j < huffman_groups; j++) {
 					var length = b.readbits(5);
 					var lengths = [];
@@ -364,19 +331,19 @@ var ArchUtils = (function(){
 				var selector_pointer = 0;
 				var decoded = 0;
 				var t;
-				
+
 				// Main Huffman loop
 				var repeat = 0;
 				var repeat_power = 0;
 				var buffer = [], r;
-				
+
 				while (true) {
 					if (--decoded <= 0) {
 						decoded = 50;
 						if (selector_pointer <= selectors_list.length)
 							t = tables[selectors_list[selector_pointer++]];
 					}
-					
+
 					// INLINED: find_next_symbol
 					for (var bb in t.faht) {
 						if (b.bits < bb) {
@@ -389,7 +356,7 @@ var ArchUtils = (function(){
 							break;
 						}
 					}
-					
+
 					if (0 <= r && r <= 1) {
 						if (repeat == 0)  repeat_power = 1;
 						repeat += repeat_power << r;
@@ -402,12 +369,9 @@ var ArchUtils = (function(){
 					if (r == symbols_in_use - 1) { // eof symbol
 						break;
 					} else {
-						// INLINED: move_to_front
-						var v = favourites[r-1];
-						for (var i = r-1; i > 0; favourites[i] = favourites[--i]);
-						buffer.push(favourites[0] = v);
+						move_to_front_and_store(favourites,r-1,buffer); //Uninlined, size efficiency, Gonzalo
 					}
-				}				
+				}
 				var nt = bwt_reverse(buffer, pointer);
 				var done = [];
 				var i = 0;
